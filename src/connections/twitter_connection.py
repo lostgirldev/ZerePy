@@ -200,11 +200,11 @@ class TwitterConnection(BaseConnection):
             error_msg = f"{context} text cannot be empty"
             logger.error(error_msg)
             raise ValueError(error_msg)
-        if len(text) > 280:
-            error_msg = f"{context} exceeds 280 character limit"
-            logger.error(error_msg)
-            raise ValueError(error_msg)
         logger.debug(f"Tweet text validation passed for {context.lower()}")
+
+    def _chunk_tweet_text(self, text: str) -> List[str]:
+        """Chunk tweet text into parts that fit within Twitter's character limit"""
+        return [text[i:i+280] for i in range(0, len(text), 280)]
 
     def configure(self) -> None:
         """Sets up Twitter API authentication"""
@@ -438,14 +438,26 @@ class TwitterConnection(BaseConnection):
         return tweets
 
     def post_tweet(self, message: str, **kwargs) -> dict:
-        """Post a new tweet"""
+        """Post a new tweet or a thread if the message is too long"""
         logger.debug("Posting new tweet")
         self._validate_tweet_text(message)
 
-        response = self._make_request('post', 'tweets', json={'text': message})
-
-        logger.info("Tweet posted successfully")
-        return response
+        if len(message) <= 280:
+            response = self._make_request('post', 'tweets', json={'text': message})
+            logger.info("Tweet posted successfully")
+            return response
+        else:
+            # Break the message into chunks and post as a thread
+            chunks = self._chunk_tweet_text(message)
+            previous_tweet_id = None
+            for chunk in chunks:
+                if previous_tweet_id:
+                    response = self.reply_to_tweet(previous_tweet_id, chunk)
+                else:
+                    response = self._make_request('post', 'tweets', json={'text': chunk})
+                previous_tweet_id = response['data']['id']
+            logger.info("Thread posted successfully")
+            return response
 
     def reply_to_tweet(self, tweet_id: str, message: str, **kwargs) -> dict:
         """Reply to an existing tweet"""
