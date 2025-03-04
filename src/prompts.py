@@ -1,6 +1,6 @@
 """
-This file contains the prompt templates used for generating content in various tasks.
-These templates are formatted strings that will be populated with dynamic data at runtime.
+# Twitter prompts
+POST_TWEET_PROMPT =  ("Generate an engaging tweet. Don't include any hashtags, links or emojis."
 """
 
 #Twitter prompts

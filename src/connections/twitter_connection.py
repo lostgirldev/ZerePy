@@ -461,6 +461,37 @@ class TwitterConnection(BaseConnection):
         else:
             response = self._make_request('post', 'tweets', json={'text': message})
         return response
+    def _split_into_thread(self, message: str) -> list:
+        """Split long message into thread-sized chunks"""
+        tweets = []
+        while message:
+            if len(message) <= 280:
+                tweets.append(message)
+                break
+            # Find last space before 280 chars
+            split_point = message[:280].rfind(' ')
+            if split_point == -1:
+                split_point = 280
+            tweets.append(message[:split_point])
+            message = message[split_point:].strip()
+        return tweets"
+            # Post first tweet
+            response = self._make_request('post', 'tweets', json={'text': tweets[0]})
+            previous_tweet_id = response['data']['id']
+            
+            # Post rest of thread
+            for tweet in tweets[1:]:
+                response = self._make_request('post', 'tweets',
+                    json={
+                        'text': tweet,
+                        'reply': {
+                            'in_reply_to_tweet_id': previous_tweet_id
+                        }
+                    })
+                previous_tweet_id = response['data']['id']
+        else:
+            response = self._make_request('post', 'tweets', json={'text': message})
+        return response
 
     def _split_into_thread(self, message: str) -> list:
         """Split long message into thread-sized chunks"""
