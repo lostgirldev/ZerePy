@@ -482,8 +482,6 @@ class TwitterConnection(BaseConnection):
         logger.debug(f"Fetching replies for tweet {tweet_id}, count: {count}")
         
         params = {
-            "query": f"conversation_id:{tweet_id} is:reply",
-            "tweet.fields": "author_id,created_at,text",
             "max_results": min(count, 100)
         }
         
@@ -491,4 +489,3 @@ class TwitterConnection(BaseConnection):
         replies = response.get("data", [])
         
         logger.info(f"Retrieved {len(replies)} replies")
-        return replies

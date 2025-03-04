@@ -1,3 +1,4 @@
+import textwrap
 import time 
 from src.action_handler import register_action
 from src.helpers import print_h_bar
@@ -16,11 +17,37 @@ def post_tweet(agent, **kwargs):
         print_h_bar()
 
         prompt = POST_TWEET_PROMPT.format(agent_name = agent.name)
-        tweet_text = agent.prompt_llm(prompt)
-
-        if tweet_text:
-            agent.logger.info("\n🚀 Posting tweet:")
-            agent.logger.info(f"'{tweet_text}'")
+            # Split into thread if > 280 chars
+            if len(tweet_text) > 280:
+                agent.logger.info("\n🧵 Tweet exceeds 280 characters, creating thread...")
+                # Split into chunks of 280 chars
+                chunks = textwrap.wrap(tweet_text, 280)
+                
+                # Post first tweet
+                response = agent.connection_manager.perform_action(
+                    connection_name="twitter",
+                    action_name="post-tweet",
+                    params=[chunks[0]]
+                )
+                
+                # Post rest as replies
+                tweet_id = response.get('data', {}).get('id')
+                for chunk in chunks[1:]:
+                    response = agent.connection_manager.perform_action(
+                        connection_name="twitter",
+                        action_name="reply-to-tweet",
+                        params=[tweet_id, chunk]
+                    )
+                    tweet_id = response.get('data', {}).get('id')
+            else:
+                # Post single tweet
+                agent.logger.info("\n🚀 Posting tweet:")
+                agent.logger.info(f"'{tweet_text}'")
+                agent.connection_manager.perform_action(
+                    connection_name="twitter",
+                    action_name="post-tweet",
+                    params=[tweet_text]
+                )
             agent.connection_manager.perform_action(
                 connection_name="twitter",
                 action_name="post-tweet",
