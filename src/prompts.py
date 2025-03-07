@@ -1,7 +1,5 @@
-"""
-# Twitter prompts
-POST_TWEET_PROMPT =  ("Generate an engaging tweet. Don't include any hashtags, links or emojis."
-"""
+#Twitter prompts
+POST_TWEET_PROMPT =  ("Generate an engaging tweet. Don't include any hashtags, links or emojis.")
 
 #Twitter prompts
 POST_TWEET_PROMPT =  ("Generate an engaging tweet. Don't include any hashtags, links or emojis. Keep it under 280 characters."
