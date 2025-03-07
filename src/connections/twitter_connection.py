@@ -276,6 +276,7 @@ class TwitterConnection(BaseConnection):
 
             oauth_tokens = oauth.fetch_access_token(access_token_url)
 
+        
         logger.debug(f"Posting tweet: {message[:50]}...")
             # Post first tweet
             response = self._make_request('post', 'tweets', json={'text': tweets[0]})
@@ -283,7 +284,7 @@ class TwitterConnection(BaseConnection):
             
             # Post rest of thread
             for tweet in tweets[1:]:
-                response = self._make_request('post', 'tweets',
+            previous_tweet_id = response.get('data', {}).get('id')
                     json={
                         'text': tweet,
                         'reply': {
@@ -294,7 +295,7 @@ class TwitterConnection(BaseConnection):
         else:
             response = self._make_request('post', 'tweets', json={'text': message})
         return response
-    def _split_into_thread(self, message: str) -> list:
+                previous_tweet_id = response.get('data', {}).get('id')
         """Split long message into thread-sized chunks"""
         tweets = []
         while message:
@@ -315,50 +316,6 @@ class TwitterConnection(BaseConnection):
                 user_id,
                 'TWITTER_USERNAME':
                 username,
-                'TWITTER_CONSUMER_KEY':
-                credentials['consumer_key'],
-                'TWITTER_CONSUMER_SECRET':
-                credentials['consumer_secret'],
-                'TWITTER_ACCESS_TOKEN':
-                oauth_tokens.get('oauth_token'),
-                'TWITTER_ACCESS_TOKEN_SECRET':
-                oauth_tokens.get('oauth_token_secret')
-            }
-
-            for key, value in env_vars.items():
-                set_key('.env', key, value)
-                logger.debug(f"Saved {key} to .env")
-
-            logger.info("\n✅ Twitter authentication successfully set up!")
-            logger.info(
-                "Your API keys, secrets, and user ID have been stored in the .env file."
-            )
-            return True
-
-        except Exception as e:
-            error_msg = f"Setup failed: {str(e)}"
-            logger.error(error_msg)
-            raise TwitterConfigurationError(error_msg)
-
-    def is_configured(self, verbose = False) -> bool:
-        """Check if Twitter credentials are configured and valid"""
-        logger.debug("Checking Twitter configuration status")
-        try:
-            credentials = self._get_credentials()
-
-            # Initialize client and validate credentials
-            client = tweepy.Client(
-                consumer_key=credentials['TWITTER_CONSUMER_KEY'],
-                consumer_secret=credentials['TWITTER_CONSUMER_SECRET'],
-                access_token=credentials['TWITTER_ACCESS_TOKEN'],
-                access_token_secret=credentials['TWITTER_ACCESS_TOKEN_SECRET'])
-
-            client.get_me()
-            logger.debug("Twitter configuration is valid")
-            return True
-
-        except Exception as e:
-            if verbose:
                 error_msg = str(e)
                 if isinstance(e, TwitterConfigurationError):
                     error_msg = f"Configuration error: {error_msg}"
