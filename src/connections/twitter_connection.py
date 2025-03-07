@@ -276,21 +276,42 @@ class TwitterConnection(BaseConnection):
 
             oauth_tokens = oauth.fetch_access_token(access_token_url)
 
-            # Save credentials
-            if not os.path.exists('.env'):
-                logger.debug("Creating new .env file")
-                with open('.env', 'w') as f:
-                    f.write('')
-
-            # Create temporary OAuth session to get user ID
-            temp_oauth = OAuth1Session(
-                credentials['consumer_key'],
-                client_secret=credentials['consumer_secret'],
-                resource_owner_key=oauth_tokens.get('oauth_token'),
-                resource_owner_secret=oauth_tokens.get('oauth_token_secret'))
-
-            self._oauth_session = temp_oauth
-            user_id, username = self._get_authenticated_user_info()
+        # If message is longer than 280 chars, split into thread
+        if len(message) > 280:
+            logger.info("Message exceeds 280 characters, creating thread")
+            tweets = self._split_into_thread(message)
+            
+            # Post first tweet
+            response = self._make_request('post', 'tweets', json={'text': tweets[0]})
+            previous_tweet_id = response['data']['id']
+            
+            # Post rest of thread
+            for tweet in tweets[1:]:
+                response = self._make_request('post', 'tweets',
+                    json={
+                        'text': tweet,
+                        'reply': {
+                            'in_reply_to_tweet_id': previous_tweet_id
+                        }
+                    })
+                previous_tweet_id = response['data']['id']
+        else:
+            response = self._make_request('post', 'tweets', json={'text': message})
+        return response
+    def _split_into_thread(self, message: str) -> list:
+        """Split long message into thread-sized chunks"""
+        tweets = []
+        while message:
+            if len(message) <= 280:
+                tweets.append(message)
+                break
+            # Find last space before 280 chars
+            split_point = message[:280].rfind(' ')
+            if split_point == -1:
+                split_point = 280
+            tweets.append(message[:split_point])
+            message = message[split_point:].strip()
+        return tweets
 
             # Save to .env
             env_vars = {
