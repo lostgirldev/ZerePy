@@ -276,11 +276,7 @@ class TwitterConnection(BaseConnection):
 
             oauth_tokens = oauth.fetch_access_token(access_token_url)
 
-        # If message is longer than 280 chars, split into thread
-        if len(message) > 280:
-            logger.info("Message exceeds 280 characters, creating thread")
-            tweets = self._split_into_thread(message)
-            
+        logger.debug(f"Posting tweet: {message[:50]}...")
             # Post first tweet
             response = self._make_request('post', 'tweets', json={'text': tweets[0]})
             previous_tweet_id = response['data']['id']
